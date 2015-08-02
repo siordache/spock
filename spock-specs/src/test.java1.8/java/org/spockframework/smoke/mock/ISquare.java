@@ -1,9 +1,9 @@
 package org.spockframework.smoke.mock;
 
 public interface ISquare {
-  double getLength();
+  int getLength();
 
-  default double getArea() {
+  default int getArea() {
     return getLength() * getLength();
   }
 }
