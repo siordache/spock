@@ -70,7 +70,7 @@ apply from: script("ide")
 
 subprojects {
   apply plugin: "groovy"
-  apply plugin: "signing"
+//  apply plugin: "signing"
 
   sourceCompatibility = javaVersions.min()
   targetCompatibility = javaVersions.min()
@@ -98,7 +98,7 @@ subprojects {
   dependencies {
     compile(project.name == "spock-gradle" ? [] : libs.groovy)
   }
-
+/*
   signing {
     sign configurations.archives
   }
@@ -110,7 +110,7 @@ subprojects {
   ext."signing.keyId" = "2EA0A67F"
   ext."signing.password" = System.getenv("SIGNING_PASSWORD")
   ext."signing.secretKeyRingFile" = "$rootDir/config/code-signing-secring.gpg"
-
+*/
   configureJavadoc(javadoc)
   configureGroovydoc(groovydoc)
 
