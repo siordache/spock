@@ -112,7 +112,7 @@ class PartialMockingInterfacesWithDefaultMethods extends Specification {
   }
 
 
-  def "IQuarterlyCompoundedDeposit compound interest should be computed using the stubbed annual nominal interest rate"() {
+  def "IQuarterlyCompoundedDeposit: compound interest should be computed using the stubbed annual nominal interest rate"() {
     given:
     IQuarterlyCompoundedDeposit deposit = Spy() {
       1 * getAnnualNominalInterestRate() >> 0.043
@@ -125,7 +125,7 @@ class PartialMockingInterfacesWithDefaultMethods extends Specification {
     compoundInterest closeTo(438.84, 0.01)
   }
 
-  def "IQuarterlyCompoundedDeposit compound interest should be computed using the stubbed annual nominal interest rate and the stubbed compounding periods per year"() {
+  def "IQuarterlyCompoundedDeposit: compound interest should be computed using the stubbed annual nominal interest rate and the stubbed compounding periods per year"() {
     given:
     IQuarterlyCompoundedDeposit deposit = Spy() {
       1 * getAnnualNominalInterestRate() >> 0.129  // stubbing an abstract method
@@ -134,6 +134,33 @@ class PartialMockingInterfacesWithDefaultMethods extends Specification {
 
     expect:
     (deposit.getCompoundInterest(1500, 2)) closeTo(438.84, 0.01)
+  }
+
+
+  def "IQuarterlyCompoundedDeposit: should throw unchecked exception for negative values of principalAmount"() {
+    given:
+    IQuarterlyCompoundedDeposit deposit = Spy() {
+      getAnnualNominalInterestRate() >> 0.043
+    }
+
+    when:
+    deposit.getCompoundInterest(-1500, 6)
+
+    then:
+    thrown(IllegalArgumentException)
+  }
+
+  def "IQuarterlyCompoundedDeposit: should throw checked exception for negative values of numberOfYears"() {
+    given:
+    IQuarterlyCompoundedDeposit deposit = Spy() {
+      getAnnualNominalInterestRate() >> 0.043
+    }
+
+    when:
+    deposit.getCompoundInterest(1500, -6)
+
+    then:
+    thrown(IDeposit.DepositException)
   }
 
 }

@@ -17,6 +17,7 @@ package org.spockframework.mock.runtime;
 import org.spockframework.mock.CannotCreateMockException;
 import org.spockframework.mock.IMockInvocation;
 import org.spockframework.mock.IResponseGenerator;
+import org.spockframework.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -33,33 +34,40 @@ public class DefaultMethodInvoker implements IResponseGenerator {
   }
 
   public Object respond(IMockInvocation invocation) {
+    // This implementation uses classes from the java.lang.invoke package in order to invoke a default method.
+    // Without exception handling, the implementation is analogous to the following code:
+    //      final Field field = MethodHandles.Lookup.class.getDeclaredField("IMPL_LOOKUP");
+    //      field.setAccessible(true);
+    //      final MethodHandles.Lookup implLookup = (MethodHandles.Lookup) field.get(null);
+    //      return implLookup.unreflectSpecial(method, method.getDeclaringClass()).bindTo(target).invokeWithArguments((Object)arguments);
+    // The java.lang.invoke package is only available since Java 7. In order to preserve the compatibility of spock-core
+    // with older versions of Java, we rewrite the above code using reflection.
+
+    Object boundHandle = null;
+    Method invokeWithArgumentsMethod = null;
     try {
-      // The commented out code below uses classes from the java.lang.invoke package, which is only available since Java 7.
-      // In order to preserve the compatibility of spock-core with older versions of Java, we rewrite this code using reflection.
-/*
-      final Field field = MethodHandles.Lookup.class.getDeclaredField("IMPL_LOOKUP");
-      field.setAccessible(true);
-      final MethodHandles.Lookup lookup = (MethodHandles.Lookup) field.get(null);
-      Object args = (arguments == null) ? new Object[0] : arguments;
-      final Object result = lookup
-        .unreflectSpecial(method, method.getDeclaringClass())
-        .bindTo(target)
-        .invokeWithArguments(args);
-*/
+      // Get the private field Lookup.IMPL_LOOKUP, which is maximally privileged
       Class<?> lookupClass = Class.forName("java.lang.invoke.MethodHandles$Lookup");
       final Field field = lookupClass.getDeclaredField("IMPL_LOOKUP");
       field.setAccessible(true);
       Object implLookup = field.get(null);
+
+      // Get a method handle for the default method
       Method unreflectSpecialMethod = lookupClass.getMethod("unreflectSpecial", Method.class, Class.class);
       Object specialHandle = unreflectSpecialMethod.invoke(implLookup, method, method.getDeclaringClass());
+
+      // Get a bound handle that prepends the target to the original arguments
       Method bindToMethod = specialHandle.getClass().getMethod("bindTo", Object.class);
-      Object bindHandle = bindToMethod.invoke(specialHandle, target);
-      Method invokeWithArgumentsMethod = bindHandle.getClass().getMethod("invokeWithArguments", Object[].class);
-      Object args = (arguments == null) ? new Object[0] : arguments;
-      Object result = invokeWithArgumentsMethod.invoke(bindHandle, args);
-      return result;
-    } catch (Exception e) {
-      throw new CannotCreateMockException(target.getClass(), "Failed to invoke default method '" + method.getName() + "'", e);
+      boundHandle = bindToMethod.invoke(specialHandle, target);
+
+      // Get the method MethodHandle.invokeWithArguments(Object...)
+      invokeWithArgumentsMethod = boundHandle.getClass().getMethod("invokeWithArguments", Object[].class);
+    } catch (Throwable t) {
+      throw new CannotCreateMockException(target.getClass(), "Failed to invoke default method '" + method.getName() + "'", t);
     }
+
+    // Call boundHandle.invokeWithArguments(arguments)
+     Object result = ReflectionUtil.invokeMethod(boundHandle, invokeWithArgumentsMethod, (Object)arguments);
+    return result;
   }
 }

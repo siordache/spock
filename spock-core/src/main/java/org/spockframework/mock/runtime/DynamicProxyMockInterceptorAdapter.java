@@ -15,10 +15,10 @@
 package org.spockframework.mock.runtime;
 
 import org.spockframework.mock.IResponseGenerator;
+import org.spockframework.util.ReflectionUtil;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 
 public class DynamicProxyMockInterceptorAdapter implements InvocationHandler {
   private final IProxyBasedMockInterceptor interceptor;
@@ -28,23 +28,9 @@ public class DynamicProxyMockInterceptorAdapter implements InvocationHandler {
   }
 
   public Object invoke(Object target, Method method, Object[] arguments) throws Throwable {
-    IResponseGenerator realMethodInvoker = isDefault(method)
+    IResponseGenerator realMethodInvoker = (ReflectionUtil.isDefault(method) || ReflectionUtil.isObjectMethod(method))
       ? new DefaultMethodInvoker(target, method, arguments)
       : new FailingRealMethodInvoker("Cannot invoke real method on interface based mock object");
     return interceptor.intercept(target, method, arguments, realMethodInvoker);
   }
-
-  /**
-   * Returns {@code true} if the argument {@code m} is a default method; returns {@code false} otherwise.
-   * <br/>This method is used instead of {@link Method#isDefault()} in order to preserve the compatibility with Java versions prior to java 8.
-   *
-   * @param m the method to be checked whether it is default or not
-   * @return true if and only if the argument {@code m} is a default method as defined by the Java Language Specification.
-   */
-  public static boolean isDefault(Method m) {
-    // Default methods are public non-abstract instance methods declared in an interface.
-    return ((m.getModifiers() & (Modifier.ABSTRACT | Modifier.PUBLIC | Modifier.STATIC)) ==
-      Modifier.PUBLIC) && m.getDeclaringClass().isInterface();
-  }
-
 }
