@@ -66,8 +66,8 @@ public class DefaultMethodInvoker implements IResponseGenerator {
       throw new CannotCreateMockException(target.getClass(), "Failed to invoke default method '" + method.getName() + "'", t);
     }
 
-    // Call boundHandle.invokeWithArguments(arguments)
-     Object result = ReflectionUtil.invokeMethod(boundHandle, invokeWithArgumentsMethod, (Object)arguments);
+    // Call boundHandle.invokeWithArguments(arguments), sneaky throwing possible exceptions
+    Object result = ReflectionUtil.invokeMethod(boundHandle, invokeWithArgumentsMethod, (Object)arguments);
     return result;
   }
 }
